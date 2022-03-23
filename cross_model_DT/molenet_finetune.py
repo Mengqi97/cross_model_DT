@@ -2,7 +2,7 @@
 Author: mzcai
 Date: 2022-02-07 10:46:23
 Description: cross_model下游任务训练
-FilePath: /mzcai/cross_model_DT/cross_model_DT/molenet_finetune.py
+FilePath: \cross_model_DT\cross_model_DT\molenet_finetune.py
 '''
 
 import numpy as np 
@@ -221,14 +221,14 @@ def main():
     parser.add_argument('--epoch', help="epoch", type=int, default=100)
     parser.add_argument('--seq', help="sequence length", type=int, default=256)
     parser.add_argument('--lr', help="learning rate", type=float, default=3e-5)
-    parser.add_argument('--adjacency', help="use adjacency matrix", type=bool, default=True)
+    #parser.add_argument('--adjacency', help="use adjacency matrix", type=bool, default=True)
     #parser.add_argument('--embed_size', help="embedding vector size", type=int, default=768)
-    parser.add_argument('--model_dim', help="dim of transformer", type=int, default=1024)
-    parser.add_argument('--layers', help="number of layers", type=int, default=12)
-    parser.add_argument('--nhead', help="number of head", type=int, default=12)
-    parser.add_argument('--drop_rate', help="ratio of dropout", type=float, default=0)
-    parser.add_argument('--num_workers', help="number of workers", type=int, default=0)
+    #parser.add_argument('--model_dim', help="dim of transformer", type=int, default=1024)
+    #parser.add_argument('--layers', help="number of layers", type=int, default=12)
+    #parser.add_argument('--nhead', help="number of head", type=int, default=12)
+    #parser.add_argument('--drop_rate', help="ratio of dropout", type=float, default=0)
     #parser.add_argument('--saved_model', help="dir of pre-trained model", type=str)
+    parser.add_argument('--num_workers', help="number of workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument('--split', help="type of dataset", type=str, default='scaffold')
     arg = parser.parse_args()
