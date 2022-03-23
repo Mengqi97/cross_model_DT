@@ -21,7 +21,6 @@ embed_size = 768
 
 
 #目录
-bert_dir = 'models/PubMedBERT_abstract'
 data_dir = 'data'
 out_model_dir = 'models'
 spe_file = 'SPE_ChEMBL.txt'
@@ -32,7 +31,5 @@ gpu_ids = '0'
 smi_token_id = 28895
 len_of_tokenizer = 28895 + 3117 + 1
 
-# 类型选择
 
-bert_name = 'microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract'
 

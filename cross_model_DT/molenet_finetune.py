@@ -90,8 +90,6 @@ def _init_seed_fix(manualSeed):
 class FinetuningDataset(Dataset):
     def __init__(self, datapath, data_name, SPE_vocab, seq_len):
         #加载预训练好的tokenizer
-        self.tokenizer_txt = BertTokenizer.from_pretrained(os.path.join(base_dir, config.bert_dir))
-        self.tokenizer_txt.add_tokens(['[SMI]'])
         self.tokenizer_smi = SMILES_SPE_Tokenizer(
                 vocab_file=os.path.join(base_dir, config.data_dir, config.spe_voc_file),
                 spe_file=os.path.join(base_dir, config.data_dir, config.spe_file))
