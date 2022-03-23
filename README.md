@@ -10,12 +10,12 @@ cross_model在MoleculeNet上运行的下游任务代码
 其他数据集同理，将'bace'换成其他数据集即可(数据集名称字母需要全小写)。  
   
 另外在运行时还可传入其他参数进行调参操作：    
-`python ./molenet_finetune.py` 
-&emsp;&emsp;&emsp;`[--dataset] , help="name of dataset", type=str` 
-&emsp;&emsp;&emsp;`[--batch], help="batch size", type=int, default=16 ` 
-&emsp;&emsp;&emsp;`[--lr] , help="learning rate", type=float, default=3e-5 ` 
-&emsp;&emsp;&emsp;`[--seed] , help="set up random seeds ", type=int, default=7 `
-&emsp;&emsp;&emsp;`[--split] , help="type of dataset", type=str, 可传入参数：{'scaffold','random'}` 
+`python ./molenet_finetune.py` <br>
+&emsp;&emsp;&emsp;`[--dataset] , help="name of dataset", type=str` <br>
+&emsp;&emsp;&emsp;`[--batch], help="batch size", type=int, default=16 ` <br>
+&emsp;&emsp;&emsp;`[--lr] , help="learning rate", type=float, default=3e-5 `<br> 
+&emsp;&emsp;&emsp;`[--seed] , help="set up random seeds ", type=int, default=7 `<br>
+&emsp;&emsp;&emsp;`[--split] , help="type of dataset", type=str, 可传入参数：{'scaffold','random'}` <br>
           
 
 文件结构及功能说明：    
