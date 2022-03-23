@@ -1,7 +1,7 @@
 # cross_model_DT
 cross_model在MoleculeNet上运行的下游任务代码
 
-运行说明：  
+## 运行说明：  
 运行指令可参照./cross_model_DT/cross_model_DT/common_scripts中八个数据集各自对应的运行脚本。
 
 例如，如果要运行的是bace数据集，运行指令如下:  
@@ -18,7 +18,7 @@ cross_model在MoleculeNet上运行的下游任务代码
 &emsp;&emsp;&emsp;`[--split] , help="type of dataset", type=str, 可传入参数：{'scaffold','random'}` <br>
           
 
-文件结构及功能说明：    
+## 文件结构及功能说明：    
 ./finetuned_model 用来存储微调过程中的候选最佳模型  
 ./cross_model_DT/cross_model_DT/config.py 配置文件  
 ./cross_model_DT/cross_model_DT/data_utils.py 创建smiles字符串词级tokenizer  
