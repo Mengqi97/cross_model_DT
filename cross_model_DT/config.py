@@ -21,6 +21,7 @@ embed_size = 768
 
 
 #目录
+bert_dir = 'models/PubMedBERT_abstract'
 data_dir = 'data'
 out_model_dir = 'models'
 spe_file = 'SPE_ChEMBL.txt'

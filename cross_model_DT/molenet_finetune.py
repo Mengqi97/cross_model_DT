@@ -11,6 +11,7 @@ import glob
 import pandas as pd
 import random
 import argparse
+import shutil
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -39,6 +40,30 @@ from data_utils import load_model_and_parallel
 
 
 base_dir = os.path.dirname(__file__)
+
+def del_file(filepath):
+    """
+    删除某一目录下的所有文件或文件夹
+    :param filepath: 路径
+    :return:
+    """
+    del_list = os.listdir(filepath)
+    for f in del_list:
+        file_path = os.path.join(filepath, f)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+
+def handle_result(result_list):
+    mean_score = np.mean(result_list)
+    max_score = max(result_list)
+    min_score = min(result_list)
+    max_bias = max_score - mean_score
+    min_bias = mean_score - min_score
+    bias = max_bias if max_bias > min_bias else min_bias
+
+    return round(mean_score, 2), round(bias, 2)
 
 def generate_scaffold(smiles, include_chirality=False):
     scaffold = MurckoScaffold.MurckoScaffoldSmiles(smiles=smiles, includeChirality=include_chirality)
@@ -213,31 +238,8 @@ class FinetuningDataset(Dataset):
         padded[:array.shape[0], :array.shape[1]] = array
         return padded
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--path', help="dataset path", type=str, default = None)
-    parser.add_argument('--dataset', help="name of dataset", type=str)
-    parser.add_argument('--batch', help="batch size", type=int, default=16)
-    parser.add_argument('--epoch', help="epoch", type=int, default=100)
-    parser.add_argument('--seq', help="sequence length", type=int, default=256)
-    parser.add_argument('--lr', help="learning rate", type=float, default=3e-5)
-    #parser.add_argument('--adjacency', help="use adjacency matrix", type=bool, default=True)
-    #parser.add_argument('--embed_size', help="embedding vector size", type=int, default=768)
-    #parser.add_argument('--model_dim', help="dim of transformer", type=int, default=1024)
-    #parser.add_argument('--layers', help="number of layers", type=int, default=12)
-    #parser.add_argument('--nhead', help="number of head", type=int, default=12)
-    #parser.add_argument('--drop_rate', help="ratio of dropout", type=float, default=0)
-    #parser.add_argument('--saved_model', help="dir of pre-trained model", type=str)
-    parser.add_argument('--num_workers', help="number of workers", type=int, default=0)
-    parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument('--split', help="type of dataset", type=str, default='scaffold')
-    arg = parser.parse_args()
-
-    _init_seed_fix(arg.seed)
+def main(arg):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    print("device:", device)
-    print("learning_rate:", arg.lr)
 
     #----------------------------------------------1、数据准备---------------------------------------------------------------------
     if arg.dataset == "tox21":
@@ -291,7 +293,7 @@ def main():
     model = cross_Model(_config=config, num_tasks=num_tasks)
     
     ##### model = C_Smiles_BERT(config.len_of_tokenizer, max_len=arg.seq, nhead=arg.nhead, feature_dim=config.embed_size, feedforward_dim=arg.model_dim, nlayers=arg.layers, dropout_rate=arg.drop_rate, num_tasks=num_tasks, adj=arg.adjacency)
-    model.load_state_dict(torch.load(config.chem_bert_model), strict = False)
+    model.load_state_dict(torch.load(arg.saved_model), strict = False)
     ##### classifier = nn.Linear(config.embed_size, num_tasks)
     ##### model = BERT_base(model, classifier)
 
@@ -304,7 +306,11 @@ def main():
     
     logger.info("Start fine-tuning with seed:{}".format(arg.seed))
     min_valid_loss = 100000
-    counter = 0
+    max_valid_aucroc = 0
+    counter_mvl = 0
+    counter_mva = 0
+    save_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "finetuned_model/")
+    del_file(save_path)
 
     #------------------------------------------------------3、模型训练----------------------------------------------------------------
     logger.info("Start training...")
@@ -337,11 +343,15 @@ def main():
 
             loss = criterion(output.double(), (data["labels"]+1)/2)
             loss = torch.where(is_valid, loss, torch.zeros(loss.shape).to(loss.device).to(loss.dtype))
+            optim.zero_grad()
             loss = torch.sum(loss) / torch.sum(is_valid)
             loss.backward()
 
             optim.step()
-            optim.zero_grad()
+
+            if (epoch == 0) and (i == 0):
+                os.system("nvidia-smi")
+            
 
             avg_loss += loss.item()
             data_iter.set_description("epoch: {} iter: {} avg_loss: {:.6f} loss: {:.6f}".format(epoch, i+1, (avg_loss / (i+1) ), loss.item()) )
@@ -393,18 +403,27 @@ def main():
                 is_valid = target_list[:,i] ** 2 > 0
                 roc_list.append(roc_auc_score((target_list[is_valid,i]+1)/2, predicted_list[is_valid,i]))
                 
-        logger.info("AUCROC: {}".format(sum(roc_list)/len(roc_list)) )
+        logger.info("AUCROC: {}".format(sum(roc_list)/len(roc_list)))
+        valid_aucroc = sum(roc_list)/len(roc_list)
         
         if valid_avg_loss < min_valid_loss:
-            save_path = "../finetuned_model/" + str(arg.dataset) + "_epoch_" + str(epoch) + "_val_loss_" + str(round(valid_avg_loss/len(valid_dataloader),5))
+            save_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "finetuned_model/" + str(arg.dataset) + "_epoch_" + str(epoch) + "_val_loss_" + str(round(valid_avg_loss/len(valid_dataloader),5)))
             torch.save(model.state_dict(), save_path+'.pt')
             model.to(device)
             min_valid_loss = valid_avg_loss
-            counter = 0
-        counter += 1
-
+            counter_mvl = 0
         
-        if counter > 5:
+        if valid_aucroc > max_valid_aucroc:
+            save_path_roc = os.path.join(os.path.dirname(os.path.dirname(__file__)), "finetuned_model/" + str(arg.dataset) + "_epoch_" + str(epoch) + "_aucroc_" + str(round(valid_aucroc,5)))
+            torch.save(model.state_dict(), save_path_roc+'.pt')
+            model.to(device)
+            max_valid_aucroc = valid_aucroc
+            counter_mva = 0
+        
+        
+        counter_mvl += 1
+        counter_mva += 1
+        if (counter_mvl > 5) and (counter_mva > 5):
             break
 
     # eval
@@ -414,7 +433,10 @@ def main():
     target_list = []
 
 
-    #-----------------------------------------------------------4、模型test集测试-------------------------------------------------
+    #-----------------------------------------------------------4-1、模型test集测试-------------------------------------------------
+    MVL_aucroc = 0
+    MVA_aucroc = 0
+    
     logger.info("Start testing...")
     logger.info("Evaluate on min valid loss model")
     
@@ -455,7 +477,96 @@ def main():
                 roc_list.append(roc_auc_score((target_list[is_valid,i]+1)/2, predicted_list[is_valid,i]))
 
         
-        logger.info("Finally AUCROC:{} ".format(sum(roc_list)/len(roc_list)) )
+        logger.info("MIN LOSS AUCROC:{} ".format(sum(roc_list)/len(roc_list)) )
+        MVL_aucroc = sum(roc_list)/len(roc_list)
+
+    #-----------------------------------------------------------4-2、模型test集测试-------------------------------------------------
+    logger.info("Start testing...")
+    logger.info("Evaluate on max valid rocauc model")
+    
+
+    predicted_list = []
+    target_list = []
+    
+    print(save_path_roc)
+    model.load_state_dict(torch.load(save_path_roc+'.pt'))
+    model.eval()
+
+    with torch.no_grad():
+        for i, data in enumerate(test_dataloader):
+            data = {key:value.to(device) for key, value in data.items()}
+
+            output = model.forward(data["input_ids"],data["attention_mask"])
+            
+            ##### position_num = torch.arange(arg.seq).repeat(data["input_ids"].size(0), 1).to(device)
+            ##### 
+            ##### if arg.adjacency is True:
+            #####     output = model.forward(data["input_ids"], position_num, adj_mat=data["smiles_bert_adjmat"])
+            ##### else:
+            #####     output = model.forward(data["input_ids"], position_num)
+            #####
+            ##### output = output[:, 0, :] #output:[batch_size,task_num]
+            
+            data["labels"] = data["labels"].view(output.shape).to(torch.float64)
+            predicted = torch.sigmoid(output)
+            predicted_list.append(predicted)
+            target_list.append(data["labels"])
+
+        predicted_list = torch.cat(predicted_list, dim=0).cpu().numpy()
+        target_list = torch.cat(target_list, dim=0).cpu().numpy()
+        roc_list = []
+        for i in range(target_list.shape[1]):
+            if np.sum(target_list[:,i] == 1) > 0 and np.sum(target_list[:,i] == -1) > 0:
+                is_valid = target_list[:,i] ** 2 > 0
+                roc_list.append(roc_auc_score((target_list[is_valid,i]+1)/2, predicted_list[is_valid,i]))
+
+        
+        logger.info("MAX AUCROC:{} ".format(sum(roc_list)/len(roc_list)) )
+        MVA_aucroc = sum(roc_list)/len(roc_list)
+
+    return MVL_aucroc, MVA_aucroc
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', help="dataset path", type=str, default = None)
+    parser.add_argument('--dataset', help="name of dataset", type=str)
+    parser.add_argument('--batch', help="batch size", type=int, default=16)
+    parser.add_argument('--epoch', help="epoch", type=int, default=100)
+    parser.add_argument('--seq', help="sequence length", type=int, default=256)
+    parser.add_argument('--lr', help="learning rate", type=float, default=3e-5)
+    #parser.add_argument('--adjacency', help="use adjacency matrix", type=bool, default=True)
+    #parser.add_argument('--embed_size', help="embedding vector size", type=int, default=768)
+    #parser.add_argument('--model_dim', help="dim of transformer", type=int, default=1024)
+    #parser.add_argument('--layers', help="number of layers", type=int, default=12)
+    #parser.add_argument('--nhead', help="number of head", type=int, default=12)
+    #parser.add_argument('--drop_rate', help="ratio of dropout", type=float, default=0)
+    parser.add_argument('--saved_model', help="dir of pre-trained model", type=str)
+    parser.add_argument('--num_workers', help="number of workers", type=int, default=0)
+    parser.add_argument("--seed", type=str, default='7')
+    parser.add_argument('--split', help="type of dataset", type=str, default='scaffold')
+    arg = parser.parse_args()
+
+    
+    seed_list = [int(ele) for ele in arg.seed.split(',')]
+
+    print("learning_rate:", arg.lr)
+
+    print(f'********************** {arg.dataset} **********************')
+    model_name = arg.saved_model.split('/')[-1]
+    print(f'********************** {model_name} **********************')
+
+    MVL_list = []
+    MVA_list = []
+    for seed in seed_list:
+        logger.info(f'seed: {seed}')
+        _init_seed_fix(seed)
+        MVL_aucroc, MVA_aucroc =  main(arg)
+        MVL_list.append(MVL_aucroc)
+        MVA_list.append(MVA_aucroc)
+    
+    mean_score, bias = handle_result(MVL_list)
+    print('Min Valid Loss')
+    print(f'{model_name}: {mean_score}+-{bias}')
+    mean_score, bias = handle_result(MVA_list)
+    print('Max AUCROC')
+    print(f'{model_name}: {mean_score}+-{bias}')
