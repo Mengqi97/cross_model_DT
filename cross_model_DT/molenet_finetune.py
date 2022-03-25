@@ -227,7 +227,7 @@ def main():
     #parser.add_argument('--layers', help="number of layers", type=int, default=12)
     #parser.add_argument('--nhead', help="number of head", type=int, default=12)
     #parser.add_argument('--drop_rate', help="ratio of dropout", type=float, default=0)
-    #parser.add_argument('--saved_model', help="dir of pre-trained model", type=str)
+    parser.add_argument('--saved_model', help="dir of pre-trained model", type=str)
     parser.add_argument('--num_workers', help="number of workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument('--split', help="type of dataset", type=str, default='scaffold')
