@@ -1,0 +1,8 @@
+/finetuned_model
+/cross_model_DT/models
+/.ipynb_checkpoints
+/.vscode
+*.pyc
+/.idea
+*.zip
+.DS_Store
