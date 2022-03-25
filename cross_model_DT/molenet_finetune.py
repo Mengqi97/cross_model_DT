@@ -291,7 +291,7 @@ def main():
     model = cross_Model(_config=config, num_tasks=num_tasks)
     
     ##### model = C_Smiles_BERT(config.len_of_tokenizer, max_len=arg.seq, nhead=arg.nhead, feature_dim=config.embed_size, feedforward_dim=arg.model_dim, nlayers=arg.layers, dropout_rate=arg.drop_rate, num_tasks=num_tasks, adj=arg.adjacency)
-    model.load_state_dict(torch.load(config.chem_bert_model), strict = False)
+    model.load_state_dict(torch.load(config.saved_model), strict = False)
     ##### classifier = nn.Linear(config.embed_size, num_tasks)
     ##### model = BERT_base(model, classifier)
 
