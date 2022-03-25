@@ -29,3 +29,4 @@ cross_model在MoleculeNet上运行的下游任务代码
 ./cross_model_DT/cross_model_DT/common_scripts 用来存储运行所有数据集的脚本  
 ./cross_model_DT/cross_model_DT/data SPE_ChEMBL.txt和spe_voc.txt是用来初始化的文件  
 ./cross_model_DT/cross_model_DT/data/DT_dataset 用来存储八个全部下游任务数据集
+./cross_model_DT/cross_model_DT/models 用来存储模型初始化参数，其中'pytorch_model.bin'从[此处](https://huggingface.co/microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract/blob/main/pytorch_model.bin)下载，并替换文件夹中同名文件。
