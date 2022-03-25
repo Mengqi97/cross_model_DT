@@ -31,6 +31,6 @@ gpu_ids = '0'
 
 smi_token_id = 28895
 len_of_tokenizer = 28895 + 3117 + 1
-
+bert_name = 'microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract'
 
 
