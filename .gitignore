@@ -7,5 +7,3 @@
 *.zip
 .DS_Store
 *.pt
-*.pyc
-*.bin
